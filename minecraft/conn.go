@@ -701,8 +701,13 @@ func (conn *Conn) handleRequestNetworkSettings(pk *packet.RequestNetworkSettings
 		return fmt.Errorf("error sending network settings: %v", err)
 	}
 	_ = conn.Flush()
-	conn.enc.EnableCompression(conn.compression)
-	conn.dec.EnableCompression(conn.compression)
+	compression := conn.compression
+	if pk.ClientProtocol >= 649 { // 1.20.60
+		// TODO: I hate this hack as much as the next person, but I don't see another other way out.
+		compression = packet.NewOnTheFlyCompression(compression)
+	}
+	conn.enc.EnableCompression(compression)
+	conn.dec.EnableCompression(compression)
 	return nil
 }
 
@@ -712,8 +717,13 @@ func (conn *Conn) handleNetworkSettings(pk *packet.NetworkSettings) error {
 	if !ok {
 		return fmt.Errorf("unknown compression algorithm: %v", pk.CompressionAlgorithm)
 	}
-	conn.enc.EnableCompression(alg)
-	conn.dec.EnableCompression(alg)
+	compression := alg
+	if conn.proto.ID() >= 649 { // 1.20.60
+		// TODO: I hate this hack as much as the next person, but I don't see another other way out.
+		compression = packet.NewOnTheFlyCompression(compression)
+	}
+	conn.enc.EnableCompression(compression)
+	conn.dec.EnableCompression(compression)
 	conn.readyToLogin = true
 	return nil
 }

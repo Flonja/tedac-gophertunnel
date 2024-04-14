@@ -99,16 +99,6 @@ func (decoder *Decoder) Decode() (packets [][]byte, err error) {
 		data = data[:len(data)-8]
 	}
 
-	if decoder.compression == nil {
-		if data[0] != 0xff {
-			compression, ok := CompressionByID(uint16(data[0]))
-			if !ok {
-				return nil, fmt.Errorf("error decompressing packet: unknown compression algorithm %v", data[0])
-			}
-			decoder.EnableCompression(compression)
-		}
-		data = data[1:]
-	}
 	if decoder.compression != nil {
 		data, err = decoder.compression.Decompress(data)
 		if err != nil {
