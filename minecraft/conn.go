@@ -8,6 +8,8 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
+	"github.com/go-jose/go-jose/v3"
+	"github.com/go-jose/go-jose/v3/jwt"
 	"github.com/google/uuid"
 	"github.com/sandertv/go-raknet"
 	"github.com/sandertv/gophertunnel/minecraft/internal"
@@ -17,8 +19,6 @@ import (
 	"github.com/sandertv/gophertunnel/minecraft/protocol/packet"
 	"github.com/sandertv/gophertunnel/minecraft/resource"
 	"github.com/sandertv/gophertunnel/minecraft/text"
-	"gopkg.in/square/go-jose.v2"
-	"gopkg.in/square/go-jose.v2/jwt"
 	"io"
 	"log"
 	"net"
@@ -492,12 +492,11 @@ func (conn *Conn) SetDeadline(t time.Time) error {
 // SetReadDeadline sets the read deadline of the Conn to the time passed. The time must be after time.Now().
 // Passing an empty time.Time to the method (time.Time{}) results in the read deadline being cleared.
 func (conn *Conn) SetReadDeadline(t time.Time) error {
-	if t.Before(time.Now()) {
-		panic(fmt.Errorf("error setting read deadline: time passed is before time.Now()"))
-	}
 	empty := time.Time{}
 	if t == empty {
 		conn.readDeadline = make(chan time.Time)
+	} else if t.Before(time.Now()) {
+		panic(fmt.Errorf("error setting read deadline: time passed is before time.Now()"))
 	} else {
 		conn.readDeadline = time.After(time.Until(t))
 	}
@@ -703,7 +702,7 @@ func (conn *Conn) handleRequestNetworkSettings(pk *packet.RequestNetworkSettings
 	}
 	_ = conn.Flush()
 	conn.enc.EnableCompression(conn.compression)
-	conn.dec.EnableCompression(conn.compression)
+	conn.dec.EnableCompression()
 	return nil
 }
 
@@ -714,7 +713,7 @@ func (conn *Conn) handleNetworkSettings(pk *packet.NetworkSettings) error {
 		return fmt.Errorf("unknown compression algorithm: %v", pk.CompressionAlgorithm)
 	}
 	conn.enc.EnableCompression(alg)
-	conn.dec.EnableCompression(alg)
+	conn.dec.EnableCompression()
 	conn.readyToLogin = true
 	return nil
 }

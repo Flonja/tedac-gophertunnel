@@ -26,6 +26,11 @@ func NewEncoder(w io.Writer) *Encoder {
 
 // EnableEncryption enables encryption for the Encoder using the secret key bytes passed. Each packet sent
 // after encryption is enabled will be encrypted.
+// func (encoder *Encoder) EnableEncryption(keyBytes [32]byte) {
+//	block, _ := aes.NewCipher(keyBytes[:])
+//	first12 := append([]byte(nil), keyBytes[:12]...)
+//	stream := cipher.NewCTR(block, append(first12, 0, 0, 0, 2))
+//	encoder.encrypt = newEncrypt(keyBytes[:], stream)
 func (encoder *Encoder) EnableEncryption(encryption Encryption) {
 	encoder.encryption = encryption
 }
@@ -57,7 +62,9 @@ func (encoder *Encoder) Encode(packets [][]byte) error {
 	}
 
 	data := buf.Bytes()
+	prepend := []byte{header}
 	if encoder.compression != nil {
+		prepend = append(prepend, byte(encoder.compression.EncodeCompression()))
 		var err error
 		data, err = encoder.compression.Compress(data)
 		if err != nil {
@@ -65,9 +72,9 @@ func (encoder *Encoder) Encode(packets [][]byte) error {
 		}
 	}
 
-	data = append([]byte{header}, data...)
+	data = append(prepend, data...)
 	if encoder.encryption != nil {
-		// If the encryption session is not nil, encryption is enabled, meaning we should ctr the
+		// If the encryption session is not nil, encryption is enabled, meaning we should encrypt the
 		// compressed data of this packet.
 		data = encoder.encryption.Encrypt(data)
 	}

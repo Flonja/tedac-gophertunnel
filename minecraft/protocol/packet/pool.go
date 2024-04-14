@@ -98,7 +98,6 @@ func init() {
 		IDInventorySlot:               func() Packet { return &InventorySlot{} },
 		IDContainerSetData:            func() Packet { return &ContainerSetData{} },
 		IDCraftingData:                func() Packet { return &CraftingData{} },
-		IDCraftingEvent:               func() Packet { return &CraftingEvent{} },
 		IDGUIDataPickItem:             func() Packet { return &GUIDataPickItem{} },
 		IDAdventureSettings:           func() Packet { return &AdventureSettings{} },
 		IDBlockActorData:              func() Packet { return &BlockActorData{} },
@@ -116,7 +115,6 @@ func init() {
 		IDMapInfoRequest:              func() Packet { return &MapInfoRequest{} },
 		IDRequestChunkRadius:          func() Packet { return &RequestChunkRadius{} },
 		IDChunkRadiusUpdated:          func() Packet { return &ChunkRadiusUpdated{} },
-		IDItemFrameDropItem:           func() Packet { return &ItemFrameDropItem{} },
 		IDGameRulesChanged:            func() Packet { return &GameRulesChanged{} },
 		IDCamera:                      func() Packet { return &Camera{} },
 		IDBossEvent:                   func() Packet { return &BossEvent{} },
@@ -171,8 +169,6 @@ func init() {
 		IDLevelEventGeneric:           func() Packet { return &LevelEventGeneric{} },
 		IDLecternUpdate:               func() Packet { return &LecternUpdate{} },
 		// ---
-		IDAddEntity:                     func() Packet { return &AddEntity{} },
-		IDRemoveEntity:                  func() Packet { return &RemoveEntity{} },
 		IDClientCacheStatus:             func() Packet { return &ClientCacheStatus{} },
 		IDOnScreenTextureAnimation:      func() Packet { return &OnScreenTextureAnimation{} },
 		IDMapCreateLockedCopy:           func() Packet { return &MapCreateLockedCopy{} },
@@ -245,12 +241,15 @@ func init() {
 		IDCameraPresets:                     func() Packet { return &CameraPresets{} },
 		IDUnlockedRecipes:                   func() Packet { return &UnlockedRecipes{} },
 		// ---
-		IDCameraInstruction:             func() Packet { return &CameraInstruction{} },
-		IDCompressedBiomeDefinitionList: func() Packet { return &CompressedBiomeDefinitionList{} },
-		IDTrimData:                      func() Packet { return &TrimData{} },
-		IDOpenSign:                      func() Packet { return &OpenSign{} },
-		IDAgentAnimation:                func() Packet { return &AgentAnimation{} },
-		IDRefreshEntitlements:           func() Packet { return &RefreshEntitlements{} },
+		IDCameraInstruction:              func() Packet { return &CameraInstruction{} },
+		IDCompressedBiomeDefinitionList:  func() Packet { return &CompressedBiomeDefinitionList{} },
+		IDTrimData:                       func() Packet { return &TrimData{} },
+		IDOpenSign:                       func() Packet { return &OpenSign{} },
+		IDAgentAnimation:                 func() Packet { return &AgentAnimation{} },
+		IDRefreshEntitlements:            func() Packet { return &RefreshEntitlements{} },
+		IDPlayerToggleCrafterSlotRequest: func() Packet { return &PlayerToggleCrafterSlotRequest{} },
+		IDSetPlayerInventoryOptions:      func() Packet { return &SetPlayerInventoryOptions{} },
+		IDSetHud:                         func() Packet { return &SetHud{} },
 	}
 	for id, pk := range serverOriginating {
 		RegisterPacketFromServer(id, pk)
@@ -279,7 +278,6 @@ func init() {
 		IDRespawn:                         func() Packet { return &Respawn{} },
 		IDContainerOpen:                   func() Packet { return &ContainerOpen{} },
 		IDContainerClose:                  func() Packet { return &ContainerClose{} },
-		IDCraftingEvent:                   func() Packet { return &CraftingEvent{} },
 		IDAdventureSettings:               func() Packet { return &AdventureSettings{} },
 		IDPlayerInput:                     func() Packet { return &PlayerInput{} },
 		IDSetPlayerGameType:               func() Packet { return &SetPlayerGameType{} },
@@ -333,6 +331,8 @@ func init() {
 		IDGameTestResults:                 func() Packet { return &GameTestResults{} },
 		IDOpenSign:                        func() Packet { return &OpenSign{} },
 		IDBlockActorData:                  func() Packet { return &BlockActorData{} },
+		IDPlayerToggleCrafterSlotRequest:  func() Packet { return &PlayerToggleCrafterSlotRequest{} },
+		IDSetPlayerInventoryOptions:       func() Packet { return &SetPlayerInventoryOptions{} },
 	}
 	for id, pk := range clientOriginating {
 		RegisterPacketFromClient(id, pk)

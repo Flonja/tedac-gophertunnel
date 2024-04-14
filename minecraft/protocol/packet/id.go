@@ -53,7 +53,7 @@ const (
 	IDInventorySlot
 	IDContainerSetData
 	IDCraftingData
-	IDCraftingEvent
+	_
 	IDGUIDataPickItem
 	IDAdventureSettings
 	IDBlockActorData
@@ -71,7 +71,7 @@ const (
 	IDMapInfoRequest
 	IDRequestChunkRadius
 	IDChunkRadiusUpdated
-	IDItemFrameDropItem
+	_
 	IDGameRulesChanged
 	IDCamera
 	IDBossEvent
@@ -127,8 +127,8 @@ const (
 	IDLevelEventGeneric
 	IDLecternUpdate
 	_
-	IDAddEntity
-	IDRemoveEntity
+	_
+	_
 	IDClientCacheStatus
 	IDMapCreateLockedCopy
 	IDOnScreenTextureAnimation
@@ -206,4 +206,7 @@ const (
 	IDOpenSign
 	IDAgentAnimation
 	IDRefreshEntitlements
+	IDPlayerToggleCrafterSlotRequest
+	IDSetPlayerInventoryOptions
+	IDSetHud
 )

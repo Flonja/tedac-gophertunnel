@@ -146,8 +146,7 @@ type ShapelessRecipe struct {
 	Input []ItemDescriptorCount
 	// Output is a list of items that are created as a result of crafting the recipe.
 	Output []ItemStack
-	// UUID is a UUID identifying the recipe. This can actually be set to an empty UUID if the CraftingEvent
-	// packet is not used.
+	// UUID is a UUID identifying the recipe. Since the CraftingEvent packet no longer exists, this can always be empty.
 	UUID uuid.UUID
 	// Block is the block name that is required to craft the output of the recipe. The block is not prefixed
 	// with 'minecraft:', so it will look like 'crafting_table' as an example.
@@ -196,8 +195,7 @@ type ShapedRecipe struct {
 	Input []ItemDescriptorCount
 	// Output is a list of items that are created as a result of crafting the recipe.
 	Output []ItemStack
-	// UUID is a UUID identifying the recipe. This can actually be set to an empty UUID if the CraftingEvent
-	// packet is not used.
+	// UUID is a UUID identifying the recipe. Since the CraftingEvent packet no longer exists, this can always be empty.
 	UUID uuid.UUID
 	// Block is the block name that is required to craft the output of the recipe. The block is not prefixed
 	// with 'minecraft:', so it will look like 'crafting_table' as an example.
@@ -237,8 +235,7 @@ type FurnaceDataRecipe struct {
 
 // MultiRecipe serves as an 'enable' switch for multi-shape recipes.
 type MultiRecipe struct {
-	// UUID is a UUID identifying the recipe. This can actually be set to an empty UUID if the CraftingEvent
-	// packet is not used.
+	// UUID is a UUID identifying the recipe. Since the CraftingEvent packet no longer exists, this can always be empty.
 	UUID uuid.UUID
 	// RecipeNetworkID is a unique ID used to identify the recipe over network. Each recipe must have a unique
 	// network ID. Recommended is to just increment a variable for each unique recipe registered.
