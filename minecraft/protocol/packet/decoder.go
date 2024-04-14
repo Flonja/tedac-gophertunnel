@@ -46,12 +46,6 @@ func NewDecoder(reader io.Reader) *Decoder {
 
 // EnableEncryption enables encryption for the Decoder using the secret key bytes passed. Each packet received
 // will be decrypted.
-// func (decoder *Decoder) EnableEncryption(keyBytes [32]byte) {
-//	block, _ := aes.NewCipher(keyBytes[:])
-//	first12 := append([]byte(nil), keyBytes[:12]...)
-//	stream := cipher.NewCTR(block, append(first12, 0, 0, 0, 2))
-//	decoder.encrypt = newEncrypt(keyBytes[:], stream)
-//}
 func (decoder *Decoder) EnableEncryption(encryption Encryption) {
 	decoder.encryption = encryption
 }
@@ -105,20 +99,16 @@ func (decoder *Decoder) Decode() (packets [][]byte, err error) {
 		data = data[:len(data)-8]
 	}
 
-	// if decoder.decompress {
-	//		if data[0] == 0xff {
-	//			data = data[1:]
-	//		} else {
-	//			compression, ok := CompressionByID(uint16(data[0]))
-	//			if !ok {
-	//				return nil, fmt.Errorf("error decompressing packet: unknown compression algorithm %v", data[0])
-	//			}
-	//			data, err = compression.Decompress(data[1:])
-	//			if err != nil {
-	//				return nil, fmt.Errorf("error decompressing packet: %v", err)
-	//			}
-	//		}
-	//	}
+	if decoder.compression == nil {
+		if data[0] != 0xff {
+			compression, ok := CompressionByID(uint16(data[0]))
+			if !ok {
+				return nil, fmt.Errorf("error decompressing packet: unknown compression algorithm %v", data[0])
+			}
+			decoder.EnableCompression(compression)
+		}
+		data = data[1:]
+	}
 	if decoder.compression != nil {
 		data, err = decoder.compression.Decompress(data)
 		if err != nil {

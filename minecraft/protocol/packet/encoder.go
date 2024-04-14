@@ -26,11 +26,6 @@ func NewEncoder(w io.Writer) *Encoder {
 
 // EnableEncryption enables encryption for the Encoder using the secret key bytes passed. Each packet sent
 // after encryption is enabled will be encrypted.
-// func (encoder *Encoder) EnableEncryption(keyBytes [32]byte) {
-//	block, _ := aes.NewCipher(keyBytes[:])
-//	first12 := append([]byte(nil), keyBytes[:12]...)
-//	stream := cipher.NewCTR(block, append(first12, 0, 0, 0, 2))
-//	encoder.encrypt = newEncrypt(keyBytes[:], stream)
 func (encoder *Encoder) EnableEncryption(encryption Encryption) {
 	encoder.encryption = encryption
 }
