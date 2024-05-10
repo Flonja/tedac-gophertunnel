@@ -81,7 +81,7 @@ func (decoder *Decoder) Decode() (packets [][]byte, err error) {
 		data, err = decoder.pr.ReadPacket()
 	}
 	if err != nil {
-		return nil, &BatchError{Err: err}
+		return nil, &CompressionError{Op: "error reading batch from reader", Err: err}
 	}
 	if len(data) == 0 {
 		return nil, nil
@@ -94,7 +94,7 @@ func (decoder *Decoder) Decode() (packets [][]byte, err error) {
 		decoder.encryption.Decrypt(data)
 		if err := decoder.encryption.Verify(data); err != nil {
 			// The packet did not have a correct checksum.
-			return nil, fmt.Errorf("error verifying packet: %v", err)
+			return nil, &CompressionError{Op: "error verifying packet", Err: err}
 		}
 		data = data[:len(data)-8]
 	}
@@ -102,7 +102,7 @@ func (decoder *Decoder) Decode() (packets [][]byte, err error) {
 	if decoder.compression != nil {
 		data, err = decoder.compression.Decompress(data)
 		if err != nil {
-			return nil, fmt.Errorf("error decompressing packet: %v", err)
+			return nil, &CompressionError{Op: "error decompressing packet", Err: err}
 		}
 	}
 
@@ -110,7 +110,7 @@ func (decoder *Decoder) Decode() (packets [][]byte, err error) {
 	for b.Len() != 0 {
 		var length uint32
 		if err := protocol.Varuint32(b, &length); err != nil {
-			return nil, fmt.Errorf("error reading packet length: %v", err)
+			return nil, &CompressionError{Op: "error reading packet length", Err: err}
 		}
 		packets = append(packets, b.Next(int(length)))
 	}
@@ -118,19 +118,4 @@ func (decoder *Decoder) Decode() (packets [][]byte, err error) {
 		return nil, fmt.Errorf("number of packets %v in compressed batch exceeds %v", len(packets), maximumInBatch)
 	}
 	return packets, nil
-}
-
-type BatchError struct {
-	// Err is the error that occurred during the operation.
-	// The Error method panics if the error is nil.
-	Err error
-}
-
-func (e *BatchError) Unwrap() error { return e.Err }
-
-func (e *BatchError) Error() string {
-	if e == nil {
-		return "<nil>"
-	}
-	return "error reading batch from reader: " + e.Err.Error()
 }

@@ -2,7 +2,6 @@ package packet
 
 import (
 	"bytes"
-	"fmt"
 	"github.com/sandertv/gophertunnel/minecraft/internal"
 	"io"
 )
@@ -49,10 +48,10 @@ func (encoder *Encoder) Encode(packets [][]byte) error {
 	for _, packet := range packets {
 		// Each packet is prefixed with a varuint32 specifying the length of the packet.
 		if err := writeVaruint32(buf, uint32(len(packet)), l); err != nil {
-			return fmt.Errorf("error writing varuint32 length: %v", err)
+			return &CompressionError{Op: "error writing varuint32 length", Err: err}
 		}
 		if _, err := buf.Write(packet); err != nil {
-			return fmt.Errorf("error writing packet payload: %v", err)
+			return &CompressionError{Op: "error writing packet payload", Err: err}
 		}
 	}
 
@@ -61,7 +60,7 @@ func (encoder *Encoder) Encode(packets [][]byte) error {
 		var err error
 		data, err = encoder.compression.Compress(data)
 		if err != nil {
-			return fmt.Errorf("error compressing packet: %v", err)
+			return &CompressionError{Op: "error compressing packet", Err: err}
 		}
 	}
 
@@ -72,7 +71,7 @@ func (encoder *Encoder) Encode(packets [][]byte) error {
 		data = encoder.encryption.Encrypt(data)
 	}
 	if _, err := encoder.w.Write(data); err != nil {
-		return fmt.Errorf("error writing compressed packet to io.Writer: %v", err)
+		return &CompressionError{Op: "error writing compressed packet to io.Writer", Err: err}
 	}
 	return nil
 }

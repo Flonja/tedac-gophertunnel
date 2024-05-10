@@ -188,3 +188,20 @@ func CompressionByID(id uint16) (Compression, bool) {
 	}
 	return c, ok
 }
+
+type CompressionError struct {
+	// Op is the operation which caused the error.
+	Op string
+	// Err is the error that occurred during the operation.
+	// The Error method panics if the error is nil.
+	Err error
+}
+
+func (e *CompressionError) Unwrap() error { return e.Err }
+
+func (e *CompressionError) Error() string {
+	if e == nil {
+		return "<nil>"
+	}
+	return e.Op + ": " + e.Err.Error()
+}
