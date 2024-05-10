@@ -4,6 +4,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"errors"
 	"fmt"
 	"github.com/sandertv/go-raknet"
 	"github.com/sandertv/gophertunnel/minecraft/protocol"
@@ -285,7 +286,7 @@ func (listener *Listener) handleConn(conn *Conn) {
 		// and push them to the Conn so that they may be processed.
 		packets, err := conn.dec.Decode()
 		if err != nil {
-			if !raknet.ErrConnectionClosed(err) {
+			if !errors.Is(err, net.ErrClosed) {
 				listener.cfg.ErrorLog.Printf("error reading from listener connection: %v\n", err)
 			}
 			return

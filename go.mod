@@ -1,6 +1,8 @@
 module github.com/sandertv/gophertunnel
 
-go 1.19
+go 1.22
+
+toolchain go1.22.2
 
 require (
 	github.com/go-gl/mathgl v1.0.0
@@ -18,7 +20,7 @@ require (
 )
 
 require (
-	github.com/df-mc/atomic v1.10.0 // indirect
+	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	golang.org/x/crypto v0.5.0 // indirect
 	golang.org/x/image v0.5.0 // indirect
@@ -26,4 +28,4 @@ require (
 	google.golang.org/protobuf v1.28.1 // indirect
 )
 
-replace github.com/sandertv/go-raknet => github.com/tedacmc/tedac-raknet v0.0.4
+replace github.com/sandertv/go-raknet => github.com/flonja/tedac-raknet v0.0.5
