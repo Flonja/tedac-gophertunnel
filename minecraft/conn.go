@@ -1454,5 +1454,5 @@ func (conn *Conn) closeErr(op string) error {
 	if msg := *conn.disconnectMessage.Load(); msg != "" {
 		return conn.wrap(DisconnectError(msg), op)
 	}
-	return conn.wrap(errClosed, op)
+	return conn.wrap(net.ErrClosed, op)
 }
