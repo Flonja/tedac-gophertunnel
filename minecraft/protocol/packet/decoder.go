@@ -81,7 +81,7 @@ func (decoder *Decoder) Decode() (packets [][]byte, err error) {
 		data, err = decoder.pr.ReadPacket()
 	}
 	if err != nil {
-		return nil, fmt.Errorf("error reading batch from reader: %v", err)
+		return nil, &BatchError{Err: err}
 	}
 	if len(data) == 0 {
 		return nil, nil
@@ -118,4 +118,19 @@ func (decoder *Decoder) Decode() (packets [][]byte, err error) {
 		return nil, fmt.Errorf("number of packets %v in compressed batch exceeds %v", len(packets), maximumInBatch)
 	}
 	return packets, nil
+}
+
+type BatchError struct {
+	// Err is the error that occurred during the operation.
+	// The Error method panics if the error is nil.
+	Err error
+}
+
+func (e *BatchError) Unwrap() error { return e.Err }
+
+func (e *BatchError) Error() string {
+	if e == nil {
+		return "<nil>"
+	}
+	return "error reading batch from reader: " + e.Err.Error()
 }
