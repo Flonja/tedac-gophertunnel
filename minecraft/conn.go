@@ -442,7 +442,7 @@ func (conn *Conn) Flush() error {
 	if len(conn.bufferedSend) > 0 {
 		if err := conn.enc.Encode(conn.bufferedSend); err != nil && !errors.Is(err, net.ErrClosed) {
 			// Should never happen.
-			panic(fmt.Errorf("error encoding packet batch: %v", err))
+			return fmt.Errorf("error encoding packet batch: %v", err)
 		}
 		// First manually clear out conn.bufferedSend so that re-using the slice after resetting its length to
 		// 0 doesn't result in an 'invisible' memory leak.
