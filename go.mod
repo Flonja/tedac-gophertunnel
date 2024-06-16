@@ -23,3 +23,5 @@ require (
 	golang.org/x/crypto v0.24.0 // indirect
 	golang.org/x/image v0.17.0 // indirect
 )
+
+replace github.com/sandertv/go-raknet => github.com/Flonja/tedac-raknet v0.0.5
