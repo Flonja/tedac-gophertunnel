@@ -617,7 +617,7 @@ func (conn *Conn) handleMultiple(pks []packet.Packet) error {
 	var err error
 	for _, pk := range pks {
 		if e := conn.handlePacket(pk); e != nil {
-			err = e
+			err = fmt.Errorf("handle %T: %w", pk, e)
 		}
 	}
 	return err
@@ -690,7 +690,7 @@ func (conn *Conn) handleRequestNetworkSettings(pk *packet.RequestNetworkSettings
 			status = packet.PlayStatusLoginFailedServer
 		}
 		_ = conn.WritePacket(&packet.PlayStatus{Status: status})
-		return fmt.Errorf("%v connected with an incompatible protocol: expected protocol = %v, client protocol = %v", conn.identityData.DisplayName, protocol.CurrentProtocol, pk.ClientProtocol)
+		return fmt.Errorf("incompatible protocol version: expected %v, got %v", protocol.CurrentProtocol, pk.ClientProtocol)
 	}
 
 	conn.expect(packet.IDLogin)
@@ -698,7 +698,7 @@ func (conn *Conn) handleRequestNetworkSettings(pk *packet.RequestNetworkSettings
 		CompressionThreshold: 512,
 		CompressionAlgorithm: conn.compression.EncodeCompression(),
 	}); err != nil {
-		return fmt.Errorf("error sending network settings: %v", err)
+		return fmt.Errorf("send NetworkSettings: %w", err)
 	}
 	_ = conn.Flush()
 	compression := conn.compression
@@ -715,7 +715,7 @@ func (conn *Conn) handleRequestNetworkSettings(pk *packet.RequestNetworkSettings
 func (conn *Conn) handleNetworkSettings(pk *packet.NetworkSettings) error {
 	alg, ok := packet.CompressionByID(pk.CompressionAlgorithm)
 	if !ok {
-		return fmt.Errorf("unknown compression algorithm: %v", pk.CompressionAlgorithm)
+		return fmt.Errorf("unknown compression algorithm %v", pk.CompressionAlgorithm)
 	}
 	compression := alg
 	if conn.proto.ID() >= 649 { // 1.20.60
@@ -764,10 +764,10 @@ func (conn *Conn) handleLogin(pk *packet.Login) error {
 	// Make sure the player is logged in with XBOX Live when necessary.
 	if !authResult.XBOXLiveAuthenticated && conn.authEnabled {
 		_ = conn.WritePacket(&packet.Disconnect{Message: text.Colourf("<red>You must be logged in with XBOX Live to join.</red>")})
-		return fmt.Errorf("connection %v was not authenticated to XBOX Live", conn.RemoteAddr())
+		return fmt.Errorf("client was not authenticated to XBOX Live")
 	}
 	if err := conn.enableEncryption(authResult.PublicKey); err != nil {
-		return fmt.Errorf("error enabling encryption: %v", err)
+		return fmt.Errorf("enable encryption: %w", err)
 	}
 	return nil
 }
@@ -777,7 +777,7 @@ func (conn *Conn) handleClientToServerHandshake() error {
 	// The next expected packet is a resource pack client response.
 	conn.expect(packet.IDResourcePackClientResponse, packet.IDClientCacheStatus)
 	if err := conn.WritePacket(&packet.PlayStatus{Status: packet.PlayStatusLoginSuccess}); err != nil {
-		return fmt.Errorf("error sending play status login success: %v", err)
+		return fmt.Errorf("send PlayStatus (Status=LoginSuccess): %w", err)
 	}
 	pk := &packet.ResourcePacksInfo{TexturePackRequired: conn.texturePacksRequired}
 	for _, pack := range conn.resourcePacks {
@@ -809,7 +809,7 @@ func (conn *Conn) handleClientToServerHandshake() error {
 	}
 	// Finally we send the packet after the play status.
 	if err := conn.WritePacket(pk); err != nil {
-		return fmt.Errorf("error sending resource packs info: %v", err)
+		return fmt.Errorf("send ResourcePacksInfo: %w", err)
 	}
 	return nil
 }
@@ -843,7 +843,7 @@ func (conn *Conn) handleServerToClientHandshake(pk *packet.ServerToClientHandsha
 	c.Salt = strings.TrimRight(c.Salt, "=")
 	salt, err := base64.RawStdEncoding.DecodeString(c.Salt)
 	if err != nil {
-		return fmt.Errorf("error base64 decoding ServerToClientHandshake salt: %v", err)
+		return fmt.Errorf("decode ServerToClientHandshake salt: %w", err)
 	}
 
 	x, _ := pub.Curve.ScalarMult(pub.X, pub.Y, conn.privateKey.D.Bytes())
@@ -883,7 +883,7 @@ func (conn *Conn) handleResourcePacksInfo(pk *packet.ResourcePacksInfo) error {
 
 	for index, pack := range pk.TexturePacks {
 		if _, ok := conn.packQueue.downloadingPacks[pack.UUID]; ok {
-			conn.log.Printf("duplicate texture pack entry %v in resource pack info\n", pack.UUID)
+			conn.log.Printf("handle ResourcePacksInfo: duplicate texture pack (UUID=%v)\n", pack.UUID)
 			conn.packQueue.packAmount--
 			continue
 		}
@@ -906,7 +906,7 @@ func (conn *Conn) handleResourcePacksInfo(pk *packet.ResourcePacksInfo) error {
 	}
 	for index, pack := range pk.BehaviourPacks {
 		if _, ok := conn.packQueue.downloadingPacks[pack.UUID]; ok {
-			conn.log.Printf("duplicate behaviour pack entry %v in resource pack info\n", pack.UUID)
+			conn.log.Printf("handle ResourcePacksInfo: duplicate behaviour pack (UUID=%v)\n", pack.UUID)
 			conn.packQueue.packAmount--
 			continue
 		}
@@ -952,17 +952,17 @@ func (conn *Conn) handleResourcePackStack(pk *packet.ResourcePackStack) error {
 			if pack.UUID == behaviourPack.UUID {
 				// We had a behaviour pack with the same UUID as the texture pack, so we drop the texture
 				// pack and log it.
-				conn.log.Printf("dropping behaviour pack with UUID %v due to a texture pack with the same UUID\n", pack.UUID)
+				conn.log.Printf("handle ResourcePackStack: dropping behaviour pack (UUID=%v) due to a texture pack with the same UUID\n", pack.UUID)
 				pk.BehaviourPacks = append(pk.BehaviourPacks[:i], pk.BehaviourPacks[i+1:]...)
 			}
 		}
 		if !conn.hasPack(pack.UUID, pack.Version, false) {
-			return fmt.Errorf("texture pack {uuid=%v, version=%v} not downloaded", pack.UUID, pack.Version)
+			return fmt.Errorf("texture pack (UUID=%v, version=%v) not downloaded", pack.UUID, pack.Version)
 		}
 	}
 	for _, pack := range pk.BehaviourPacks {
 		if !conn.hasPack(pack.UUID, pack.Version, true) {
-			return fmt.Errorf("behaviour pack {uuid=%v, version=%v} not downloaded", pack.UUID, pack.Version)
+			return fmt.Errorf("behaviour pack (UUID=%v, version=%v) not downloaded", pack.UUID, pack.Version)
 		}
 	}
 	conn.expect(packet.IDStartGame)
@@ -1011,7 +1011,7 @@ func (conn *Conn) handleResourcePackClientResponse(pk *packet.ResourcePackClient
 		packs := pk.PacksToDownload
 		conn.packQueue = &resourcePackQueue{packs: conn.resourcePacks}
 		if err := conn.packQueue.Request(packs); err != nil {
-			return fmt.Errorf("error looking up resource packs to download: %v", err)
+			return fmt.Errorf("lookup resource packs by UUID: %w", err)
 		}
 		// Proceed with the first resource pack download. We run all downloads in sequence rather than in
 		// parallel, as it's less prone to packet loss.
@@ -1037,12 +1037,12 @@ func (conn *Conn) handleResourcePackClientResponse(pk *packet.ResourcePackClient
 			})
 		}
 		if err := conn.WritePacket(pk); err != nil {
-			return fmt.Errorf("error writing resource pack stack packet: %v", err)
+			return fmt.Errorf("send ResourcePackStack: %w", err)
 		}
 	case packet.PackResponseCompleted:
 		conn.loggedIn = true
 	default:
-		return fmt.Errorf("unknown resource pack client response: %v", pk.Response)
+		return fmt.Errorf("unknown ResourcePackClientResponse response type %v", pk.Response)
 	}
 	return nil
 }
@@ -1103,7 +1103,7 @@ func (conn *Conn) nextResourcePackDownload() error {
 		return fmt.Errorf("no resource packs to download")
 	}
 	if err := conn.WritePacket(pk); err != nil {
-		return fmt.Errorf("error sending resource pack data info packet: %v", err)
+		return fmt.Errorf("send ResourcePackDataInfo: %w", err)
 	}
 	// Set the next expected packet to ResourcePackChunkRequest packets.
 	conn.expect(packet.IDResourcePackChunkRequest)
@@ -1119,12 +1119,12 @@ func (conn *Conn) handleResourcePackDataInfo(pk *packet.ResourcePackDataInfo) er
 	if !ok {
 		// We either already downloaded the pack or we got sent an invalid UUID, that did not match any pack
 		// sent in the ResourcePacksInfo packet.
-		return fmt.Errorf("unknown pack to download with UUID %v", id)
+		return fmt.Errorf("unknown pack (UUID=%v)", id)
 	}
 	if pack.size != pk.Size {
 		// Size mismatch: The ResourcePacksInfo packet had a size for the pack that did not match with the
 		// size sent here.
-		conn.log.Printf("pack %v had a different size in the ResourcePacksInfo packet than the ResourcePackDataInfo packet\n", id)
+		conn.log.Printf("pack (UUID=%v) had a different size in ResourcePacksInfo than in ResourcePackDataInfo\n", id)
 		pack.size = pk.Size
 	}
 
@@ -1160,13 +1160,13 @@ func (conn *Conn) handleResourcePackDataInfo(pk *packet.ResourcePackDataInfo) er
 		defer conn.packMu.Unlock()
 
 		if pack.buf.Len() != int(pack.size) {
-			conn.log.Printf("incorrect resource pack size: expected %v, but got %v\n", pack.size, pack.buf.Len())
+			conn.log.Printf("incorrect resource pack size (UUID=%v): expected %v, got %v\n", id, pack.size, pack.buf.Len())
 			return
 		}
 		// First parse the resource pack from the total byte buffer we obtained.
 		newPack, err := resource.Read(pack.buf)
 		if err != nil {
-			conn.log.Printf("invalid full resource pack data for UUID %v: %v\n", id, err)
+			conn.log.Printf("invalid full resource pack data (UUID=%v): %v\n", id, err)
 			return
 		}
 		conn.packQueue.packAmount--
@@ -1188,16 +1188,16 @@ func (conn *Conn) handleResourcePackChunkData(pk *packet.ResourcePackChunkData) 
 	if !ok {
 		// We haven't received a ResourcePackDataInfo packet from the server, so we can't use this data to
 		// download a resource pack.
-		return fmt.Errorf("resource pack chunk data for resource pack that was not being downloaded")
+		return fmt.Errorf("chunk data for resource pack that was not being downloaded")
 	}
 	lastData := pack.buf.Len()+int(pack.chunkSize) >= int(pack.size)
 	if !lastData && uint32(len(pk.Data)) != pack.chunkSize {
 		// The chunk data didn't have the full size and wasn't the last data to be sent for the resource pack,
 		// meaning we got too little data.
-		return fmt.Errorf("resource pack chunk data had a length of %v, but expected %v", len(pk.Data), pack.chunkSize)
+		return fmt.Errorf("expected chunk size %v, got %v", pack.chunkSize, len(pk.Data))
 	}
 	if pk.ChunkIndex != pack.expectedIndex {
-		return fmt.Errorf("resource pack chunk data had chunk index %v, but expected %v", pk.ChunkIndex, pack.expectedIndex)
+		return fmt.Errorf("expected chunk index %v, got %v", pack.expectedIndex, pk.ChunkIndex)
 	}
 	pack.expectedIndex++
 	pack.newFrag <- pk.Data
@@ -1209,10 +1209,10 @@ func (conn *Conn) handleResourcePackChunkData(pk *packet.ResourcePackChunkData) 
 func (conn *Conn) handleResourcePackChunkRequest(pk *packet.ResourcePackChunkRequest) error {
 	current := conn.packQueue.currentPack
 	if current.UUID() != pk.UUID {
-		return fmt.Errorf("resource pack chunk request had unexpected UUID: expected %v, but got %v", current.UUID(), pk.UUID)
+		return fmt.Errorf("expected pack UUID %v, but got %v", current.UUID(), pk.UUID)
 	}
 	if conn.packQueue.currentOffset != uint64(pk.ChunkIndex)*packChunkSize {
-		return fmt.Errorf("resource pack chunk request had unexpected chunk index: expected %v, but got %v", conn.packQueue.currentOffset/packChunkSize, pk.ChunkIndex)
+		return fmt.Errorf("expected pack UUID %v, but got %v", conn.packQueue.currentOffset/packChunkSize, pk.ChunkIndex)
 	}
 	response := &packet.ResourcePackChunkData{
 		UUID:       pk.UUID,
@@ -1226,7 +1226,7 @@ func (conn *Conn) handleResourcePackChunkRequest(pk *packet.ResourcePackChunkReq
 		// If we hit an EOF, we don't need to return an error, as we've simply reached the end of the content
 		// AKA the last chunk.
 		if err != io.EOF {
-			return fmt.Errorf("error reading resource pack chunk: %v", err)
+			return fmt.Errorf("read resource pack chunk: %w", err)
 		}
 		response.Data = response.Data[:n]
 
@@ -1239,7 +1239,7 @@ func (conn *Conn) handleResourcePackChunkRequest(pk *packet.ResourcePackChunkReq
 		}()
 	}
 	if err := conn.WritePacket(response); err != nil {
-		return fmt.Errorf("error writing resource pack chunk data packet: %v", err)
+		return fmt.Errorf("send ResourcePackChunkData: %w", err)
 	}
 
 	return nil
@@ -1297,7 +1297,7 @@ func (conn *Conn) handleStartGame(pk *packet.StartGame) error {
 // of the connection, and spawns the player.
 func (conn *Conn) handleRequestChunkRadius(pk *packet.RequestChunkRadius) error {
 	if pk.ChunkRadius < 1 {
-		return fmt.Errorf("requested chunk radius must be at least 1, got %v", pk.ChunkRadius)
+		return fmt.Errorf("expected chunk radius of at least 1, got %v", pk.ChunkRadius)
 	}
 	conn.expect(packet.IDSetLocalPlayerAsInitialised)
 	radius := pk.ChunkRadius
@@ -1329,7 +1329,7 @@ func (conn *Conn) handleRequestChunkRadius(pk *packet.RequestChunkRadius) error 
 // radius of the connection.
 func (conn *Conn) handleChunkRadiusUpdated(pk *packet.ChunkRadiusUpdated) error {
 	if pk.ChunkRadius < 1 {
-		return fmt.Errorf("new chunk radius must be at least 1, got %v", pk.ChunkRadius)
+		return fmt.Errorf("expected chunk radius of at least 1, got %v", pk.ChunkRadius)
 	}
 	conn.expect(packet.IDPlayStatus)
 
@@ -1345,7 +1345,7 @@ func (conn *Conn) handleChunkRadiusUpdated(pk *packet.ChunkRadiusUpdated) error 
 // logged in.
 func (conn *Conn) handleSetLocalPlayerAsInitialised(pk *packet.SetLocalPlayerAsInitialised) error {
 	if pk.EntityRuntimeID != conn.gameData.EntityRuntimeID {
-		return fmt.Errorf("entity runtime ID mismatch: entity runtime ID in StartGame and SetLocalPlayerAsInitialised packets should be equal")
+		return fmt.Errorf("entity runtime ID mismatch: expected %v (from StartGame), got %v", conn.gameData.EntityRuntimeID, pk.EntityRuntimeID)
 	}
 	if conn.waitingForSpawn.CompareAndSwap(true, false) {
 		close(conn.spawn)
@@ -1359,7 +1359,7 @@ func (conn *Conn) handlePlayStatus(pk *packet.PlayStatus) error {
 	switch pk.Status {
 	case packet.PlayStatusLoginSuccess:
 		if err := conn.WritePacket(&packet.ClientCacheStatus{Enabled: conn.cacheEnabled}); err != nil {
-			return fmt.Errorf("error sending client cache status: %v", err)
+			return fmt.Errorf("send ClientCacheStatus: %w", err)
 		}
 		// The next packet we expect is the ResourcePacksInfo packet.
 		conn.expect(packet.IDResourcePacksInfo)
@@ -1394,7 +1394,7 @@ func (conn *Conn) handlePlayStatus(pk *packet.PlayStatus) error {
 		_ = conn.Close()
 		return fmt.Errorf("cannot join an editor game on vanilla")
 	default:
-		return fmt.Errorf("unknown play status in PlayStatus packet %v", pk.Status)
+		return fmt.Errorf("unknown play status %v", pk.Status)
 	}
 }
 
@@ -1425,7 +1425,7 @@ func (conn *Conn) enableEncryption(clientPublicKey *ecdsa.PublicKey) error {
 		return fmt.Errorf("compact serialise server JWT: %w", err)
 	}
 	if err := conn.WritePacket(&packet.ServerToClientHandshake{JWT: []byte(serverJWT)}); err != nil {
-		return fmt.Errorf("error sending ServerToClientHandshake packet: %v", err)
+		return fmt.Errorf("send ServerToClientHandshake: %w", err)
 	}
 	// Flush immediately as we'll enable encryption after this.
 	_ = conn.Flush()
